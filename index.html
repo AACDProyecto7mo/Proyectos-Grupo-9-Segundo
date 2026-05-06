@@ -1,0 +1,745 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Módulo de Pedidos — ILM 7mo Informática 2026</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #0e1117;
+  --bg2: #161b27;
+  --bg3: #1e2536;
+  --border: rgba(255,255,255,.08);
+  --border2: rgba(255,255,255,.14);
+  --txt: #e8edf8;
+  --txt2: #8892aa;
+  --txt3: #5a6480;
+  --accent: #4f7eff;
+  --red: #e8394a;
+  --amber: #e89a1c;
+  --green: #1aad7c;
+  --mono: 'JetBrains Mono', monospace;
+}
+
+html, body { height: 100%; overflow: hidden; }
+
+body {
+  font-family: 'Inter', sans-serif;
+  background: var(--bg);
+  color: var(--txt);
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+.deck { height: 100vh; overflow: hidden; position: relative; }
+
+.slide {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column;
+  opacity: 0; pointer-events: none;
+  transition: opacity .28s ease, transform .28s ease;
+  transform: translateX(30px);
+  overflow: hidden;
+}
+.slide.active { opacity: 1; pointer-events: all; transform: translateX(0); }
+.slide.out-left { transform: translateX(-30px); opacity: 0; pointer-events: none; }
+
+/* TOP BAR */
+.topbar {
+  display: flex; align-items: center; gap: 1rem;
+  padding: .85rem 2.5rem;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg2);
+  flex-shrink: 0;
+}
+.topbar-label {
+  font-family: var(--mono); font-size: .64rem;
+  letter-spacing: .15em; text-transform: uppercase; color: var(--accent);
+}
+.topbar-title { font-size: .82rem; font-weight: 500; color: var(--txt2); }
+.topbar-num { margin-left: auto; font-family: var(--mono); font-size: .7rem; color: var(--txt3); }
+
+/* BODY */
+.slide-body {
+  flex: 1; overflow-y: auto; padding: 1.75rem 2.5rem 5rem;
+  display: flex; flex-direction: column; gap: 1.25rem;
+}
+.slide-body::-webkit-scrollbar { width: 3px; }
+.slide-body::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
+/* BOTTOM NAV */
+.bottomnav {
+  position: fixed; bottom: 0; left: 0; right: 0; z-index: 50;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: .6rem 2rem;
+  background: rgba(14,17,23,.94); backdrop-filter: blur(10px);
+  border-top: 1px solid rgba(255,255,255,.06);
+}
+.nav-btns { display: flex; gap: .4rem; }
+.nav-btn {
+  padding: .35rem .9rem; border-radius: 4px;
+  border: 1px solid var(--border2); background: transparent;
+  color: var(--txt2); font-family: var(--mono); font-size: .72rem;
+  cursor: pointer; transition: all .15s;
+}
+.nav-btn:hover { background: var(--bg3); color: var(--txt); }
+.nav-btn:disabled { opacity: .3; cursor: default; }
+.progress-dots { display: flex; gap: 5px; align-items: center; }
+.dot { width: 6px; height: 6px; border-radius: 50%; background: var(--border2); cursor: pointer; transition: all .2s; }
+.dot.active { background: var(--accent); transform: scale(1.5); }
+.page-label { font-family: var(--mono); font-size: .65rem; color: var(--txt3); }
+
+/* HINT */
+.hint {
+  position: fixed; bottom: 4.2rem; left: 50%; transform: translateX(-50%);
+  font-family: var(--mono); font-size: .6rem; color: var(--txt3);
+  letter-spacing: .08em; pointer-events: none; transition: opacity 2s;
+}
+.hint.hidden { opacity: 0; }
+
+/* COVER */
+.cover-slide {
+  justify-content: center; align-items: center; text-align: center;
+  background: var(--bg); gap: 0; padding: 0;
+}
+.cover-inner { display: flex; flex-direction: column; align-items: center; gap: 1.75rem; padding: 3rem; max-width: 680px; }
+.cover-school { font-family: var(--mono); font-size: .67rem; letter-spacing: .2em; text-transform: uppercase; color: var(--txt3); }
+.cover-divider { width: 36px; height: 2px; background: var(--accent); }
+.cover-pre { font-size: .88rem; font-weight: 300; color: var(--txt2); }
+.cover-h1 { font-size: clamp(2.2rem,5vw,3.5rem); font-weight: 700; line-height: 1.1; }
+.cover-h1 em { font-style: normal; color: var(--accent); }
+.cover-sub { font-size: .88rem; color: var(--txt2); max-width: 420px; line-height: 1.5; }
+.members { display: flex; gap: .75rem; flex-wrap: wrap; justify-content: center; }
+.chip { display: flex; align-items: center; gap: .45rem; padding: .3rem .75rem; border: 1px solid var(--border2); border-radius: 20px; font-size: .78rem; color: var(--txt2); background: var(--bg2); }
+.chip-n { width: 17px; height: 17px; border-radius: 50%; background: var(--accent); color: var(--bg); display: flex; align-items: center; justify-content: center; font-size: .58rem; font-weight: 700; }
+.cover-date { font-family: var(--mono); font-size: .72rem; color: var(--txt3); }
+
+/* SECTION TITLE */
+.sec-h { font-size: 1.35rem; font-weight: 700; color: var(--txt); line-height: 1.2; }
+.sec-sub { font-size: .84rem; color: var(--txt2); margin-top: .25rem; }
+
+/* CALLOUT */
+.callout { padding: .75rem 1.1rem; border-radius: 6px; border-left: 3px solid; font-size: .83rem; line-height: 1.5; }
+.c-info  { background: rgba(79,126,255,.07);  border-color: var(--accent);  color: var(--txt2); }
+.c-warn  { background: rgba(232,154,28,.07); border-color: var(--amber);   color: var(--txt2); }
+.c-ok    { background: rgba(26,173,124,.07); border-color: var(--green);   color: var(--txt2); }
+.c-err   { background: rgba(232,57,74,.07);  border-color: var(--red);     color: var(--txt2); }
+.callout strong { color: var(--txt); }
+
+/* PROFILE CARDS */
+.pg2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1.1rem; }
+.pc {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 8px; padding: 1.35rem;
+  position: relative; overflow: hidden;
+}
+.pc::before { content: ''; position: absolute; top: 0; left: 0; width: 3px; height: 100%; }
+.pc-a::before { background: var(--accent); }
+.pc-b::before { background: var(--amber); }
+.pav { width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-family: var(--mono); font-weight: 700; font-size: .8rem; margin-bottom: .8rem; }
+.av-a { background: rgba(79,126,255,.15); color: var(--accent); }
+.av-b { background: rgba(232,154,28,.15); color: var(--amber); }
+.pc-name { font-weight: 600; font-size: .97rem; margin-bottom: .1rem; }
+.pc-role { font-family: var(--mono); font-size: .6rem; color: var(--txt3); margin-bottom: .9rem; letter-spacing: .08em; }
+.prows { display: flex; flex-direction: column; gap: .45rem; }
+.prow { display: flex; gap: .7rem; font-size: .8rem; }
+.pkey { font-family: var(--mono); font-size: .6rem; letter-spacing: .1em; text-transform: uppercase; color: var(--txt3); min-width: 80px; padding-top: .05rem; }
+.pval { color: var(--txt2); }
+.pc-quote { margin-top: .9rem; padding: .65rem .9rem; background: var(--bg3); border-left: 2px solid var(--border2); font-size: .8rem; font-style: italic; color: var(--txt2); line-height: 1.5; border-radius: 0 4px 4px 0; }
+
+/* SYMPTOM LIST */
+.sym-list { display: flex; flex-direction: column; gap: .6rem; }
+.sym { display: flex; gap: .9rem; align-items: flex-start; padding: .8rem 1.1rem; background: var(--bg2); border: 1px solid var(--border); border-radius: 6px; font-size: .85rem; color: var(--txt); line-height: 1.4; }
+.sym-icon { font-size: 1.2rem; flex-shrink: 0; margin-top: .05rem; }
+.sym span { color: var(--txt2); }
+
+/* TABLE */
+.tw { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: .81rem; }
+th { background: var(--bg3); padding: .65rem .95rem; text-align: left; font-family: var(--mono); font-size: .61rem; letter-spacing: .12em; text-transform: uppercase; color: var(--txt3); border-bottom: 1px solid var(--border2); }
+td { padding: .7rem .95rem; border-bottom: 1px solid var(--border); vertical-align: top; color: var(--txt2); line-height: 1.5; }
+tr:hover td { background: rgba(255,255,255,.015); }
+td:first-child { color: var(--txt); }
+
+/* METRICS */
+.mg { display: grid; gap: 1rem; }
+.mg3 { grid-template-columns: repeat(3,1fr); }
+.mg4 { grid-template-columns: repeat(4,1fr); }
+.mc { background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; padding: 1.2rem 1.4rem; position: relative; overflow: hidden; }
+.mc::after { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 2px; }
+.mc-g::after { background: var(--green); }
+.mc-r::after { background: var(--red); }
+.mc-a::after { background: var(--amber); }
+.mc-b::after { background: var(--accent); }
+.mn { font-size: 2.1rem; font-weight: 700; line-height: 1; margin-bottom: .2rem; }
+.mu { font-family: var(--mono); font-size: .62rem; letter-spacing: .1em; text-transform: uppercase; margin-bottom: .65rem; }
+.ml { font-weight: 600; font-size: .86rem; margin-bottom: .2rem; }
+.ms { font-size: .76rem; color: var(--txt3); line-height: 1.4; }
+
+/* RF LIST */
+.rf-list { display: flex; flex-direction: column; gap: .6rem; }
+.rf {
+  display: grid; grid-template-columns: 3.5rem 1fr auto;
+  align-items: start; gap: .9rem;
+  padding: .9rem 1.1rem;
+  background: var(--bg2); border: 1px solid var(--border); border-radius: 6px;
+}
+.rf-id { font-family: var(--mono); font-size: .68rem; font-weight: 600; color: var(--accent); padding-top: .12rem; }
+.rf-t { font-weight: 600; font-size: .88rem; margin-bottom: .18rem; }
+.rf-d { font-size: .79rem; color: var(--txt2); line-height: 1.4; }
+.badge { padding: .18rem .6rem; border-radius: 3px; font-family: var(--mono); font-size: .58rem; letter-spacing: .07em; text-transform: uppercase; font-weight: 600; white-space: nowrap; flex-shrink: 0; }
+.b-alta  { background: rgba(232,57,74,.15);  color: #f87171; }
+.b-media { background: rgba(232,154,28,.15); color: #fbbf24; }
+.b-baja  { background: rgba(139,92,246,.15); color: #a78bfa; }
+.b-new   { background: rgba(79,126,255,.12); border: 1px solid rgba(79,126,255,.3); color: var(--accent); }
+
+/* RNF */
+.rnf-grid { display: grid; grid-template-columns: 1fr 1fr; gap: .6rem; }
+.rnf { display: flex; gap: .85rem; padding: .8rem 1.05rem; background: var(--bg2); border: 1px solid var(--border); border-radius: 6px; }
+.rnf-id { font-family: var(--mono); font-size: .6rem; color: var(--txt3); flex-shrink: 0; padding-top: .18rem; }
+.rnf-t { font-size: .84rem; font-weight: 600; margin-bottom: .12rem; }
+.rnf-d { font-size: .77rem; color: var(--txt2); line-height: 1.4; }
+.rtag { display: inline-block; margin-top: .35rem; padding: .1rem .5rem; border-radius: 2px; font-family: var(--mono); font-size: .57rem; letter-spacing: .08em; text-transform: uppercase; }
+.t-hci   { background: rgba(139,92,246,.1); color: #a78bfa; }
+.t-plat  { background: rgba(79,126,255,.1);  color: var(--accent); }
+.t-seg   { background: rgba(232,57,74,.1);   color: #f87171; }
+.t-usab  { background: rgba(26,173,124,.1);  color: var(--green); }
+.t-con   { background: rgba(232,154,28,.1);  color: #fbbf24; }
+
+/* SCOPE */
+.scope2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1.1rem; }
+.scope-col { background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; padding: 1.1rem; }
+.scope-h { font-family: var(--mono); font-size: .63rem; letter-spacing: .12em; text-transform: uppercase; margin-bottom: .75rem; display: flex; align-items: center; gap: .4rem; }
+.s-yes { color: var(--green); }
+.s-no  { color: var(--red); }
+.si { display: flex; gap: .55rem; align-items: baseline; padding: .3rem 0; border-bottom: 1px solid var(--border); font-size: .81rem; color: var(--txt2); }
+.si:last-child { border: none; }
+.sdot { width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; margin-top: .32rem; }
+.sdot-y { background: var(--green); }
+.sdot-n { background: var(--red); }
+
+/* OKR */
+.okr-list { display: flex; flex-direction: column; gap: .9rem; }
+.okr { background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+.okr-h { padding: .8rem 1.1rem; background: var(--bg3); border-bottom: 1px solid var(--border); font-weight: 600; font-size: .88rem; }
+.okr-krs { padding: .5rem 1.1rem; display: flex; flex-direction: column; gap: .35rem; }
+.okr-kr { display: flex; gap: .7rem; align-items: baseline; font-size: .8rem; color: var(--txt2); padding: .28rem 0; border-bottom: 1px solid var(--border); }
+.okr-kr:last-child { border: none; }
+.krl { font-family: var(--mono); font-size: .58rem; color: var(--accent); flex-shrink: 0; }
+
+/* TEAM */
+.team-g { display: grid; grid-template-columns: repeat(3,1fr); gap: .7rem; }
+.tc { background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; padding: 1rem; }
+.tav { width: 30px; height: 30px; border-radius: 50%; background: var(--bg3); border: 1px solid var(--border2); display: flex; align-items: center; justify-content: center; font-family: var(--mono); font-size: .68rem; font-weight: 600; color: var(--txt2); margin-bottom: .65rem; }
+.tn { font-weight: 600; font-size: .86rem; margin-bottom: .12rem; }
+.tr { font-size: .72rem; color: var(--accent); margin-bottom: .35rem; font-family: var(--mono); }
+.tt { font-size: .74rem; color: var(--txt2); line-height: 1.5; }
+
+/* TIMELINE */
+.tl { display: flex; flex-direction: column; gap: 0; position: relative; }
+.tl::before { content: ''; position: absolute; left: 4.2rem; top: 0; bottom: 0; width: 1px; background: var(--border2); }
+.tli { display: grid; grid-template-columns: 3.8rem 1.4rem 1fr; gap: .7rem; align-items: start; padding: .55rem 0; }
+.tlm { font-family: var(--mono); font-size: .67rem; text-align: right; color: var(--txt3); padding-top: .18rem; }
+.tld-wrap { display: flex; justify-content: center; padding-top: .3rem; position: relative; z-index: 1; }
+.tld { width: 9px; height: 9px; border-radius: 50%; border: 2px solid var(--bg); }
+.tld-done   { background: var(--green); }
+.tld-active { background: var(--amber); box-shadow: 0 0 0 3px rgba(232,154,28,.2); }
+.tld-future { background: var(--bg3); border-color: var(--border2); }
+.tld-expo   { background: var(--amber); }
+.tl-tag { font-family: var(--mono); font-size: .6rem; letter-spacing: .1em; text-transform: uppercase; color: var(--accent); margin-bottom: .08rem; }
+.tl-title { font-weight: 600; font-size: .86rem; margin-bottom: .12rem; }
+.tl-desc  { font-size: .77rem; color: var(--txt2); line-height: 1.4; }
+
+/* NEXT STEPS */
+.next-list { display: flex; flex-direction: column; gap: .6rem; }
+.ni { display: flex; gap: .9rem; align-items: flex-start; padding: .9rem 1.1rem; background: var(--bg2); border: 1px solid var(--border); border-radius: 6px; }
+.nn { width: 26px; height: 26px; border-radius: 50%; background: var(--bg3); border: 1px solid var(--border2); display: flex; align-items: center; justify-content: center; font-family: var(--mono); font-size: .72rem; font-weight: 700; color: var(--accent); flex-shrink: 0; }
+.nt { font-weight: 600; font-size: .88rem; margin-bottom: .22rem; }
+.nd { font-size: .8rem; color: var(--txt2); line-height: 1.45; }
+
+/* HCI grid */
+.hci-g { display: grid; grid-template-columns: repeat(3,1fr); gap: .75rem; }
+.hci-c { background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; padding: 1rem; text-align: center; }
+.hci-ico { font-size: 1.5rem; margin-bottom: .45rem; }
+.hci-t { font-weight: 600; font-size: .84rem; margin-bottom: .18rem; }
+.hci-v { font-family: var(--mono); font-size: .7rem; color: var(--accent); margin-bottom: .25rem; }
+.hci-n { font-size: .74rem; color: var(--txt2); line-height: 1.4; }
+
+/* BUDGET */
+.budget-box { background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+.br { display: flex; justify-content: space-between; align-items: center; padding: .6rem 1.15rem; border-bottom: 1px solid var(--border); font-size: .82rem; }
+.bl { color: var(--txt2); }
+.bv { font-family: var(--mono); font-size: .8rem; color: var(--txt2); }
+.btotal { background: var(--bg3); border-top: 1px solid var(--border2); padding: .7rem 1.15rem; display: flex; justify-content: space-between; font-weight: 700; font-size: .9rem; }
+
+/* 2-col layout */
+.col2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; }
+</style>
+</head>
+<body>
+
+<div class="deck" id="deck">
+
+<!-- ─── SLIDE 0 PORTADA ─── -->
+<div class="slide active cover-slide" id="s0">
+  <div class="cover-inner">
+    <p class="cover-school">Instituto Leonardo Murialdo · 7mo Informática 2026</p>
+    <div class="cover-divider"></div>
+    <p class="cover-pre">Segunda presentación de proyecto</p>
+    <h1 class="cover-h1">Módulo de<br><em>Pedidos</em></h1>
+    <p class="cover-sub">Gestión de compras a proveedores · Ferretería con rubro escolar</p>
+    <div class="members">
+      <div class="chip"><span class="chip-n">01</span>Sosa, Tomás</div>
+      <div class="chip"><span class="chip-n">02</span>Gómez, Patricio</div>
+      <div class="chip"><span class="chip-n">03</span>Urquijo, Lautaro</div>
+    </div>
+    <p class="cover-date">Mayo 2026 · Instituto Leonardo Murialdo</p>
+  </div>
+</div>
+
+<!-- ─── SLIDE 1 IDENTIFICACIÓN DEL PROBLEMA ─── -->
+<div class="slide" id="s1">
+  <div class="topbar">
+    <span class="topbar-label">E01 — Identificación del problema</span>
+    <span class="topbar-title">Caso de uso: Ferretería con rubro escolar</span>
+    <span class="topbar-num">01 / 10</span>
+  </div>
+  <div class="slide-body">
+
+    <div class="pg2">
+      <div class="pc pc-a">
+        <div class="pav av-a">RA</div>
+        <p class="pc-name">Roberto A.</p>
+        <p class="pc-role">Dueño · Ferretería tradicional</p>
+        <div class="prows">
+          <div class="prow"><span class="pkey">Experiencia</span><span class="pval">11–20 años al frente</span></div>
+          <div class="prow"><span class="pkey">Equipo</span><span class="pval">3–5 personas · Franco y Gabi</span></div>
+          <div class="prow"><span class="pkey">Plataforma</span><span class="pval">Computadora de escritorio</span></div>
+          <div class="prow"><span class="pkey">Apps</span><span class="pval">Gmail · Office · PDF · Canva</span></div>
+          <div class="prow"><span class="pkey">Sistema</span><span class="pval" style="color:var(--red)">Ninguno</span></div>
+          <div class="prow"><span class="pkey">WiFi</span><span class="pval">Estable</span></div>
+        </div>
+        <p class="pc-quote">"Jueves hago pedidos, miércoles chequeo el stock, viernes llega el camión."</p>
+      </div>
+      <div class="pc pc-b">
+        <div class="pav av-b">RB</div>
+        <p class="pc-name">Roberto B.</p>
+        <p class="pc-role">Dueño · Ferretería + rubro escolar</p>
+        <div class="prows">
+          <div class="prow"><span class="pkey">Equipo</span><span class="pval">Franco (gestión desde 6:30 AM)</span></div>
+          <div class="prow"><span class="pkey">Plataforma</span><span class="pval">Computadora de escritorio</span></div>
+          <div class="prow"><span class="pkey">Apps</span><span class="pval">CorelDraw · Photoshop · WhatsApp · Gmail</span></div>
+          <div class="prow"><span class="pkey">Sistema</span><span class="pval" style="color:var(--red)">Ninguno</span></div>
+          <div class="prow"><span class="pkey">Pico demand.</span><span class="pval" style="color:var(--amber)">Marzo (inicio escolar)</span></div>
+          <div class="prow"><span class="pkey">WiFi</span><span class="pval">Estable</span></div>
+        </div>
+        <p class="pc-quote">"Franco imprime entradas de recreos para profesores antes de que vengan — a las 6:30 ya está chequeando mails y WhatsApp."</p>
+      </div>
+    </div>
+
+    <p class="sec-h">Lo que nos dijeron (síntomas)</p>
+    <div class="sym-list">
+      <div class="sym"><span class="sym-icon">📋</span><div><strong>"Los precios están en Excel impreso"</strong> <span>— actualización manual con fórmulas y código del proveedor</span></div></div>
+      <div class="sym"><span class="sym-icon">🔍</span><div><strong>"No hay forma rápida de buscar un producto"</strong> <span>— búsqueda visual o de memoria entre el local y el papel impreso</span></div></div>
+      <div class="sym"><span class="sym-icon">❌</span><div><strong>6 a 15 ventas perdidas por mes</strong> <span>— dato medible, línea de base del proyecto</span></div></div>
+      <div class="sym"><span class="sym-icon">📦</span><div><strong>"No sé cuánto vendo de cada cosa"</strong> <span>— pedidos basados en intuición, sin historial de cantidad por unidad</span></div></div>
+    </div>
+
+    <div class="callout c-info">
+      ✓ <strong>Técnica de relevamiento:</strong> Entrevista estructurada en formato Embudo + Sondeo (28 preguntas, bloques A–H). Datos cuantificados con Escala de Likert 1–5. Formulario versión 2, Mayo 2026. Dos usuarios entrevistados físicamente antes de escribir una sola línea de código.
+    </div>
+
+  </div>
+</div>
+
+<!-- ─── SLIDE 2 DEL SÍNTOMA A LA CAUSA ─── -->
+<div class="slide" id="s2">
+  <div class="topbar">
+    <span class="topbar-label">E01 — Análisis de la entrevista</span>
+    <span class="topbar-title">Del síntoma a la causa real</span>
+    <span class="topbar-num">02 / 10</span>
+  </div>
+  <div class="slide-body">
+
+    <div class="callout c-warn">
+      <strong>El error más común:</strong> construir una solución al síntoma en lugar de a la causa. Si el sistema solo digitaliza el Excel impreso, el problema no se resuelve.
+    </div>
+
+    <div class="tw">
+      <table>
+        <thead><tr><th>Síntoma (lo que dicen)</th><th>Causa real</th><th>Solución técnica</th></tr></thead>
+        <tbody>
+          <tr><td>"Los precios están desactualizados"</td><td>No hay vinculación entre producto y proveedor con historial de precios</td><td>RF01 — Precio de costo por proveedor con fecha de actualización</td></tr>
+          <tr><td>"No encuentro el producto rápido"</td><td>No hay base de datos de productos con buscador</td><td>RF02 — Buscador por nombre, código o proveedor</td></tr>
+          <tr><td>"No sé cuánto pedir"</td><td>Sin historial de ventas ni cantidad vendida por unidad</td><td>RF04 — Historial de rotación · RF05 — Lista de pedido sugerida</td></tr>
+          <tr><td>"Hay cosas que solo yo debo ver"</td><td>Sin sistema de roles ni permisos diferenciados</td><td>RF06 — Perfil dueño (acceso total) vs. empleado (restringido)</td></tr>
+          <tr><td>"Franco imprime listas para los profesores"</td><td>Sin módulo de gestión de pedidos / tickets de clientes</td><td>RF03 — Alta centralizada · RF07 — Generación de ticket de compra</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout c-ok">
+      → <strong>La solución correcta ataca la causa raíz, no el síntoma visible.</strong> Esta tabla es la justificación técnica de cada RF. Si un RF no puede trazarse a una respuesta concreta de la entrevista, no tiene razón de existir.
+    </div>
+
+  </div>
+</div>
+
+<!-- ─── SLIDE 3 DATOS MEDIBLES ─── -->
+<div class="slide" id="s3">
+  <div class="topbar">
+    <span class="topbar-label">E01 — Datos medibles</span>
+    <span class="topbar-title">Línea de base y perfiles de usuario</span>
+    <span class="topbar-num">03 / 10</span>
+  </div>
+  <div class="slide-body">
+
+    <p class="sec-h">Datos medibles — Línea de base</p>
+    <p class="sec-sub">Sin línea de base no hay forma de probar que el sistema funcionó al final del proyecto.</p>
+
+    <div class="mg mg3">
+      <div class="mc mc-r"><div class="mn" style="color:var(--red)">6–15</div><div class="mu" style="color:var(--red)">ventas / mes</div><p class="ml">Ventas perdidas estimadas</p><p class="ms">→ objetivo: 0–2 / mes</p></div>
+      <div class="mc mc-a"><div class="mn" style="color:var(--amber)">2/5</div><div class="mu" style="color:var(--amber)">Likert dificultad</div><p class="ml">Dificultad control de stock</p><p class="ms">→ objetivo: ≤2/5 con el sistema</p></div>
+      <div class="mc mc-b"><div class="mn" style="color:var(--accent)">$5K</div><div class="mu" style="color:var(--accent)">ARS / mes</div><p class="ml">Disposición a pagar</p><p class="ms">→ viable comercialmente</p></div>
+    </div>
+
+    <p class="sec-h">Perfiles de usuario identificados</p>
+
+    <div class="pg2">
+      <div class="pc pc-a">
+        <div class="pav av-a">RA</div>
+        <p class="pc-name">Roberto (Dueño)</p>
+        <p class="pc-role">Perfil: acceso total</p>
+        <div class="prows">
+          <div class="prow"><span class="pkey">Dispositivo</span><span class="pval">Computadora de escritorio — desktop-first</span></div>
+          <div class="prow"><span class="pkey">Tecnología</span><span class="pval">2/5 — interfaz muy simple</span></div>
+          <div class="prow"><span class="pkey">Visión</span><span class="pval">Presbicia · fuente mín. 14px · hace zoom</span></div>
+          <div class="prow"><span class="pkey">Acceso</span><span class="pval">Stock · precios de costo · pedidos · reportes</span></div>
+        </div>
+      </div>
+      <div class="pc pc-b">
+        <div class="pav av-b">FR</div>
+        <p class="pc-name">Franco (Empleado)</p>
+        <p class="pc-role">Perfil: acceso restringido · Entrevista pendiente</p>
+        <div class="prows">
+          <div class="prow"><span class="pkey">Tareas</span><span class="pval">Gestión de mails · WhatsApp · pedidos del día</span></div>
+          <div class="prow"><span class="pkey">Horario</span><span class="pval">Inicia a las 6:30 AM</span></div>
+          <div class="prow"><span class="pkey">Acceso</span><span class="pval">Registro de ventas · consulta de stock · tickets</span></div>
+          <div class="prow"><span class="pkey">Restringido</span><span class="pval" style="color:var(--red)">Sin precios de costo. Sin reportes.</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="callout c-warn">
+      <strong>Dos perfiles = arquitectura de permisos obligatoria desde el servidor,</strong> no solo en el frontend. Roberto explicitó: <em>"Hay cosas que solo yo debo ver."</em>
+    </div>
+
+  </div>
+</div>
+
+<!-- ─── SLIDE 4 REQUERIMIENTOS FUNCIONALES ─── -->
+<div class="slide" id="s4">
+  <div class="topbar">
+    <span class="topbar-label">E03 — Documento técnico</span>
+    <span class="topbar-title">Requerimientos Funcionales (RF)</span>
+    <span class="topbar-num">04 / 10</span>
+  </div>
+  <div class="slide-body">
+
+    <div class="callout c-info">
+      Cada RF describe <em>qué hace</em> el sistema. Deben poder trazarse a una respuesta concreta de la entrevista.
+    </div>
+
+    <div class="rf-list">
+      <div class="rf"><span class="rf-id">RF01</span><div><p class="rf-t">Precio de costo por proveedor con historial</p><p class="rf-d">Asociar precio de costo y código de proveedor a cada producto. Fecha de última actualización visible. Origen: "mantener el código del proveedor con fórmulas en Excel es trabajo manual."</p></div><span class="badge b-alta">Alta</span></div>
+      <div class="rf"><span class="rf-id">RF02</span><div><p class="rf-t">Buscador de productos</p><p class="rf-d">Buscar un producto por nombre, código o proveedor y ver stock actual y precio en una sola vista. Origen: "no hay forma rápida de buscar un producto."</p></div><span class="badge b-alta">Alta</span></div>
+      <div class="rf"><span class="rf-id">RF03</span><div><p class="rf-t">Alta de producto centralizada</p><p class="rf-d">Agregar producto con código, proveedor, precio de costo y stock inicial en un formulario. Origen: "más centralizado: agregar un producto."</p></div><span class="badge b-alta">Alta</span></div>
+      <div class="rf"><span class="rf-id">RF04</span><div><p class="rf-t">Generación de ticket / orden de compra</p><p class="rf-d">Crear pedido al proveedor, registrar qué se pidió, cuándo y a qué precio. Historial de pedidos. Origen: "tickets más agregar precios."</p></div><span class="badge b-media">Media</span></div>
+      <div class="rf"><span class="rf-id">RF05</span><div><p class="rf-t">Historial de rotación por producto</p><p class="rf-d">Ver cuánto se vende de cada ítem para tomar decisiones de pedido. Origen: "cantidad que ellos venden por unidad" — actualmente desconocido.</p></div><span class="badge b-media">Media</span></div>
+      <div class="rf"><span class="rf-id">RF06</span><div><p class="rf-t">Dos perfiles con permisos diferenciados <span class="badge b-new" style="font-size:.55rem;padding:.1rem .45rem">nuevo</span></p><p class="rf-d">Dueño: acceso total. Empleado (Franco): sin precios de costo, sin reportes financieros. Origen: "hay cosas que solo yo debo ver."</p></div><span class="badge b-alta">Alta</span></div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ─── SLIDE 5 RNF Y ALCANCE ─── -->
+<div class="slide" id="s5">
+  <div class="topbar">
+    <span class="topbar-label">E03 — Alcance y restricciones</span>
+    <span class="topbar-title">RNF y alcance del proyecto</span>
+    <span class="topbar-num">05 / 10</span>
+  </div>
+  <div class="slide-body">
+
+    <p class="sec-h">Requerimientos No Funcionales (RNF) — <span style="font-weight:300;color:var(--txt2)">cómo lo hace</span></p>
+
+    <div class="rnf-grid">
+      <div class="rnf"><span class="rnf-id">RNF-01</span><div><p class="rnf-t">Diseño desktop-first</p><p class="rnf-d">Flujos críticos completables desde escritorio. Preferencia explícita de ambos usuarios.</p><span class="rtag t-plat">plataforma</span></div></div>
+      <div class="rnf"><span class="rnf-id">RNF-02</span><div><p class="rnf-t">Fuente mínima 14px</p><p class="rnf-d">Productos, cantidades, alertas y botones. Origen: presbicia y hábito de hacer zoom.</p><span class="rtag t-hci">HCI</span></div></div>
+      <div class="rnf"><span class="rnf-id">RNF-03</span><div><p class="rnf-t">Contraste mínimo WCAG AA (4.5:1)</p><p class="rnf-d">En modo claro y oscuro. Auditable con herramienta. Fatiga visual reportada.</p><span class="rtag t-hci">HCI</span></div></div>
+      <div class="rnf"><span class="rnf-id">RNF-04</span><div><p class="rnf-t">Aislamiento de datos entre perfiles</p><p class="rnf-d">Empleado no accede a precios de costo. Control en servidor, no solo en frontend.</p><span class="rtag t-seg">seguridad</span></div></div>
+      <div class="rnf"><span class="rnf-id">RNF-05</span><div><p class="rnf-t">Tiempo de aprendizaje ≤ 30 minutos</p><p class="rnf-d">Usuario 2/5 en comodidad tecnológica completa el flujo principal sin ayuda.</p><span class="rtag t-usab">usabilidad</span></div></div>
+      <div class="rnf"><span class="rnf-id">RNF-06</span><div><p class="rnf-t">Sistema 100% online</p><p class="rnf-d">WiFi estable confirmado en ambas entrevistas. No requiere modo offline.</p><span class="rtag t-con">conectividad</span></div></div>
+    </div>
+
+    <p class="sec-h">Alcance del proyecto — <span style="font-weight:300;color:var(--txt2)">qué hacemos y qué NO</span></p>
+
+    <div class="scope2">
+      <div class="scope-col">
+        <p class="scope-h s-yes">✓ El sistema HARÁ</p>
+        <div class="si"><span class="sdot sdot-y"></span>Gestión de productos con código y proveedor</div>
+        <div class="si"><span class="sdot sdot-y"></span>Precios de costo actualizados por proveedor</div>
+        <div class="si"><span class="sdot sdot-y"></span>Buscador de productos por nombre / código</div>
+        <div class="si"><span class="sdot sdot-y"></span>Control de stock en tiempo real</div>
+        <div class="si"><span class="sdot sdot-y"></span>Generación de ticket / orden de compra</div>
+        <div class="si"><span class="sdot sdot-y"></span>Historial de pedidos al proveedor</div>
+        <div class="si"><span class="sdot sdot-y"></span>Perfiles: Dueño y Empleado con permisos</div>
+      </div>
+      <div class="scope-col">
+        <p class="scope-h s-no">✗ El sistema NO HARÁ</p>
+        <div class="si"><span class="sdot sdot-n"></span>Facturación AFIP / emisión de facturas</div>
+        <div class="si"><span class="sdot sdot-n"></span>Gestión de personal / sueldos</div>
+        <div class="si"><span class="sdot sdot-n"></span>E-commerce o tienda online</div>
+        <div class="si"><span class="sdot sdot-n"></span>Contabilidad general</div>
+        <div class="si"><span class="sdot sdot-n"></span>Integración con Mercado Libre (v1)</div>
+        <div class="si"><span class="sdot sdot-n"></span>Multi-sucursal</div>
+        <div class="si"><span class="sdot sdot-n"></span>Modo offline (WiFi estable confirmado)</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ─── SLIDE 6 OKRs ─── -->
+<div class="slide" id="s6">
+  <div class="topbar">
+    <span class="topbar-label">E01–E03 — Metas medibles</span>
+    <span class="topbar-title">OKRs del proyecto</span>
+    <span class="topbar-num">06 / 10</span>
+  </div>
+  <div class="slide-body">
+
+    <div class="callout c-info">
+      <strong>Objectives &amp; Key Results.</strong> El Objetivo es la meta inspiradora. Los KR son métricas concretas con número. Sin número, no es un KR.
+    </div>
+
+    <div class="okr-list">
+      <div class="okr">
+        <div class="okr-h">Objetivo 1 — Eliminar las pérdidas de venta por falta de stock o precios incorrectos</div>
+        <div class="okr-krs">
+          <div class="okr-kr"><span class="krl">KR 1</span>Reducir ventas perdidas de 6–15 a 0–2 por mes en los primeros 60 días de uso</div>
+          <div class="okr-kr"><span class="krl">KR 2</span>100% de los productos con precio de costo y proveedor cargado antes del lanzamiento</div>
+        </div>
+      </div>
+      <div class="okr">
+        <div class="okr-h">Objetivo 2 — Hacer que el proceso de pedidos lleve minutos, no horas</div>
+        <div class="okr-krs">
+          <div class="okr-kr"><span class="krl">KR 1</span>Generar una orden de compra completa en menos de 5 minutos desde el buscador</div>
+          <div class="okr-kr"><span class="krl">KR 2</span>Dificultad percibida ≤2/5 en prueba de usuario posterior al prototipo</div>
+        </div>
+      </div>
+      <div class="okr">
+        <div class="okr-h">Objetivo 3 — Validar viabilidad comercial en ferreterías de barrio</div>
+        <div class="okr-krs">
+          <div class="okr-kr"><span class="krl">KR 1</span>Entrevistar al menos 3 ferreteros adicionales con la misma problemática</div>
+          <div class="okr-kr"><span class="krl">KR 2</span>Roberto declara intención de pago de al menos $5.000/mes al ver el prototipo</div>
+        </div>
+      </div>
+      <div class="okr">
+        <div class="okr-h">Objetivo 4 — Roberto y Franco usan el sistema cómodamente desde el primer día</div>
+        <div class="okr-krs">
+          <div class="okr-kr"><span class="krl">KR 1</span>Roberto completa el flujo de carga de producto sin ayuda en ≤5 minutos (prueba observada)</div>
+          <div class="okr-kr"><span class="krl">KR 2</span>WCAG AA aprobada. Texto legible sin zoom en pantalla de escritorio</div>
+          <div class="okr-kr"><span class="krl">KR 3</span>Franco no puede acceder a precios de costo — verificado en prueba de roles</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ─── SLIDE 7 EQUIPO ─── -->
+<div class="slide" id="s7">
+  <div class="topbar">
+    <span class="topbar-label">Gestión — Roles del equipo</span>
+    <span class="topbar-title">El equipo de trabajo</span>
+    <span class="topbar-num">07 / 10</span>
+  </div>
+  <div class="slide-body">
+
+    <p class="sec-h">Equipo de desarrollo — 7mo Informática</p>
+    <div class="team-g">
+      <div class="tc"><div class="tav">TS</div><p class="tn">Sosa, Tomás</p><p class="tr">Project Manager + Dev Frontend</p><p class="tt">Gestión, GANTT, control de cambios, OKRs · contribuye al desarrollo frontend</p></div>
+      <div class="tc"><div class="tav">PG</div><p class="tn">Gómez, Patricio</p><p class="tr">Dev Backend</p><p class="tt">API REST, lógica de negocio, sistema de permisos y roles</p></div>
+      <div class="tc"><div class="tav">UL</div><p class="tn">Urquijo, Lautaro</p><p class="tr">Esp. Base de Datos + Infraestructura</p><p class="tt">Modelo de datos, historial de precios, aislamiento de perfiles, deployment</p></div>
+    </div>
+
+    <p class="sec-h" style="margin-top:.25rem">Partners — Otras modalidades</p>
+    <div class="team-g">
+      <div class="tc"><div class="tav">FF</div><p class="tn">Apellido, Nombre</p><p class="tr">Modalidad ADO</p><p class="tt">Documentación técnica, presupuesto, análisis económico</p></div>
+      <div class="tc"><div class="tav">GG</div><p class="tn">Apellido, Nombre</p><p class="tr">Modalidad ADO</p><p class="tt">Contratos, carpeta del proyecto, estimación de costos</p></div>
+      <div class="tc"><div class="tav">HH</div><p class="tn">Apellido, Nombre</p><p class="tr">Modalidad Electro</p><p class="tt">Hardware periférico, integración de componentes físicos</p></div>
+      <div class="tc"><div class="tav">II</div><p class="tn">Apellido, Nombre</p><p class="tr">Modalidad Multi</p><p class="tt">Diseño gráfico, identidad visual, tríptico, caja del producto</p></div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ─── SLIDE 8 PRESUPUESTO Y TECH STACK ─── -->
+<div class="slide" id="s8">
+  <div class="topbar">
+    <span class="topbar-label">E02 — Factibilidad técnica y económica</span>
+    <span class="topbar-title">Presupuesto estimado y tech stack</span>
+    <span class="topbar-num">08 / 10</span>
+  </div>
+  <div class="slide-body">
+
+    <div class="col2">
+      <div>
+        <p class="sec-h">Tech Stack</p>
+        <div class="rf-list" style="gap:.45rem;margin-top:.75rem">
+          <div class="rf" style="grid-template-columns:4.5rem 1fr auto"><span class="rf-id" style="font-size:.67rem">Frontend</span><div><p class="rf-t">React + Tailwind CSS</p><p class="rf-d">SPA desktop-first. Buscador, formularios, tickets de compra.</p></div><span class="badge b-new">Free</span></div>
+          <div class="rf" style="grid-template-columns:4.5rem 1fr auto"><span class="rf-id" style="font-size:.67rem">Backend</span><div><p class="rf-t">Node.js + Express</p><p class="rf-d">API REST, lógica de permisos, historial de precios.</p></div><span class="badge b-new">Free</span></div>
+          <div class="rf" style="grid-template-columns:4.5rem 1fr auto"><span class="rf-id" style="font-size:.67rem">DB</span><div><p class="rf-t">PostgreSQL</p><p class="rf-d">Productos, proveedores, precios, pedidos, usuarios.</p></div><span class="badge b-new">Free</span></div>
+          <div class="rf" style="grid-template-columns:4.5rem 1fr auto"><span class="rf-id" style="font-size:.67rem">Auth</span><div><p class="rf-t">JWT + roles</p><p class="rf-d">Aislamiento dueño/empleado desde el servidor.</p></div><span class="badge b-new">Free</span></div>
+          <div class="rf" style="grid-template-columns:4.5rem 1fr auto"><span class="rf-id" style="font-size:.67rem">Hosting</span><div><p class="rf-t">Railway / Render (prod)</p><p class="rf-d">Obligatorio para acceso externo. Servidor ILM solo para desarrollo.</p></div><span class="badge b-media">~$5/mes</span></div>
+        </div>
+        <div class="callout c-warn" style="margin-top:.75rem">
+          <strong>El servidor ILM no es el entorno de producción.</strong> Para entregar el sistema al cliente siempre se requiere hosting externo accesible desde internet.
+        </div>
+      </div>
+
+      <div>
+        <p class="sec-h">Presupuesto — horas hombre</p>
+        <div class="budget-box" style="margin-top:.75rem">
+          <div class="br"><span class="bl">Project Manager (1)</span><span class="bv">120 hs × $2.500/h</span></div>
+          <div class="br"><span class="bl">Desarrolladores ×2 (Front + Back)</span><span class="bv">240 hs × $3.000/h</span></div>
+          <div class="br"><span class="bl">Especialista DB</span><span class="bv">80 hs × $3.000/h</span></div>
+          <div class="br"><span class="bl">Especialista Infraestructura</span><span class="bv">60 hs × $2.500/h</span></div>
+          <div class="btotal"><span>Total estimado</span><span style="color:var(--accent)">$1.410.000</span></div>
+        </div>
+        <div class="callout c-ok" style="margin-top:.75rem">
+          Roberto declaró disposición de pago de <strong>hasta $5.000/mes</strong>. Con 100 clientes: $500.000/mes.
+        </div>
+        <div class="callout c-info" style="margin-top:.5rem">
+          📊 Verificar valores en el <strong>GANTT — hoja GANTT_Data_Referencias</strong>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ─── SLIDE 9 CRONOGRAMA ─── -->
+<div class="slide" id="s9">
+  <div class="topbar">
+    <span class="topbar-label">E01→E06 — Planificación temporal</span>
+    <span class="topbar-title">Cronograma del proyecto 2026</span>
+    <span class="topbar-num">09 / 10</span>
+  </div>
+  <div class="slide-body">
+
+    <div class="callout c-info">
+      Desde el análisis inicial en abril hasta la Expo en noviembre. Duración total: ~7 meses.
+    </div>
+
+    <div class="tl">
+      <div class="tli"><span class="tlm">ABR</span><div class="tld-wrap"><div class="tld tld-done"></div></div><div><p class="tl-tag">E01 — Completado</p><p class="tl-title">Análisis y validación</p><p class="tl-desc">Entrevistas con Roberto A. y Roberto B. Perfiles de usuario, síntomas identificados, benchmarking inicial.</p></div></div>
+      <div class="tli"><span class="tlm">MAY</span><div class="tld-wrap"><div class="tld tld-active"></div></div><div><p class="tl-tag" style="color:var(--amber)">E01–E03 — En curso</p><p class="tl-title">2da presentación + Requerimientos</p><p class="tl-desc">RF, RNF, OKRs, alcance del módulo de pedidos. Entrevista a Franco (empleado) pendiente.</p></div></div>
+      <div class="tli"><span class="tlm">JUN</span><div class="tld-wrap"><div class="tld tld-future"></div></div><div><p class="tl-tag">E03–E04</p><p class="tl-title">Diseño y prototipo</p><p class="tl-desc">Mockup Figma + validación con Roberto. Flujos: buscador, alta de producto, ticket de compra.</p></div></div>
+      <div class="tli"><span class="tlm">JUL–SEP</span><div class="tld-wrap"><div class="tld tld-future"></div></div><div><p class="tl-tag">E05</p><p class="tl-title">Desarrollo</p><p class="tl-desc">Sprints de desarrollo iterativo. RF01–RF03 primero (alta prioridad), luego RF04–RF06.</p></div></div>
+      <div class="tli"><span class="tlm">OCT</span><div class="tld-wrap"><div class="tld tld-future"></div></div><div><p class="tl-tag">E05</p><p class="tl-title">Documentación y entrega</p><p class="tl-desc">Manual de usuario, carpeta del proyecto, repositorio GitHub, landing page del producto.</p></div></div>
+      <div class="tli"><span class="tlm">NOV</span><div class="tld-wrap"><div class="tld tld-expo"></div></div><div><p class="tl-tag" style="color:var(--amber)">E06 — ⚡ EXPO</p><p class="tl-title">Presentación final</p><p class="tl-desc">Demo en vivo con producto funcional desplegado. Validación con cliente real.</p></div></div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ─── SLIDE 10 PRÓXIMOS PASOS ─── -->
+<div class="slide" id="s10">
+  <div class="topbar">
+    <span class="topbar-label">E01→E03 — Antes de programar</span>
+    <span class="topbar-title">Próximos pasos</span>
+    <span class="topbar-num">10 / 10</span>
+  </div>
+  <div class="slide-body">
+
+    <p class="sec-h">Pendientes inmediatos</p>
+    <div class="next-list">
+      <div class="ni"><div class="nn">1</div><div><p class="nt">Entrevistar a Franco (el empleado)</p><p class="nd">Completar el perfil del empleado. Aplicar el mismo formulario v2. Sin este paso, la interfaz del empleado no puede diseñarse. Roberto explicitó que Franco tiene acceso restringido.</p></div></div>
+      <div class="ni"><div class="nn">2</div><div><p class="nt">Replicar la entrevista en 2–3 ferreterías más</p><p class="nd">Validar que el problema no es exclusivo de Roberto. KR del Objetivo 3. Detectar si la problemática de pedidos manuales es un segmento de mercado real.</p></div></div>
+      <div class="ni"><div class="nn">3</div><div><p class="nt">Hacer el Benchmarking</p><p class="nd">¿Qué sistemas de gestión para ferreterías existen? ¿Por qué Roberto no los usa? (Respuesta conocida: <em>"No conozco ninguno"</em>). Estudiar la competencia y diferenciar nuestra propuesta.</p></div></div>
+      <div class="ni"><div class="nn">4</div><div><p class="nt">Armar el mockup en Figma</p><p class="nd">Frame de escritorio (1280×800px mínimo), fuente mínima 14px. Flujos obligatorios: buscador de productos, alta de producto, generación de ticket de compra.</p></div></div>
+      <div class="ni"><div class="nn">5</div><div><p class="nt">Volver con Roberto a validar el prototipo</p><p class="nd"><strong>Antes de escribir una sola línea de código.</strong> Registrar el feedback como hito en el control de cambios (fecha, entrevistador, versión del formulario v2).</p></div></div>
+    </div>
+
+    <p class="sec-h" style="margin-top:.25rem">HCI — Lo que sabemos de Roberto</p>
+    <div class="hci-g">
+      <div class="hci-c"><div class="hci-ico">💻</div><p class="hci-t">Computadora de escritorio</p><p class="hci-v">Desktop-first obligatorio</p><p class="hci-n">Preferencia explícita de ambos entrevistados</p></div>
+      <div class="hci-c"><div class="hci-ico">👓</div><p class="hci-t">Presbicia</p><p class="hci-v">Fuente mín. 14px</p><p class="hci-n">Usa lentes de cerca. Suele hacer zoom. Texto pequeño le cuesta.</p></div>
+      <div class="hci-c"><div class="hci-ico">🎯</div><p class="hci-t">Nivel tecnológico 2/5</p><p class="hci-v">Sin menús complejos</p><p class="hci-n">Acción visible. Flujos cortos y directos.</p></div>
+    </div>
+
+    <div class="callout c-ok">
+      ✓ <strong>Regla de oro:</strong> el mockup tiene que estar validado por Roberto antes de la fase de programación. El feedback se registra como hito en el control de cambios.
+    </div>
+
+  </div>
+</div>
+
+</div><!-- /deck -->
+
+<!-- HINT -->
+<div class="hint" id="hint">← → navegar · Esc inicio</div>
+
+<!-- BOTTOM NAV -->
+<div class="bottomnav">
+  <div class="nav-btns">
+    <button class="nav-btn" id="btnPrev" onclick="go(-1)" disabled>← Anterior</button>
+    <button class="nav-btn" id="btnNext" onclick="go(1)">Siguiente →</button>
+  </div>
+  <div class="progress-dots" id="dots"></div>
+  <span class="page-label" id="pageLabel">1 / 11</span>
+</div>
+
+<script>
+const slides = document.querySelectorAll('.slide');
+const total = slides.length;
+let cur = 0;
+
+const dotsEl = document.getElementById('dots');
+for (let i = 0; i < total; i++) {
+  const d = document.createElement('div');
+  d.className = 'dot' + (i === 0 ? ' active' : '');
+  d.onclick = () => goTo(i);
+  dotsEl.appendChild(d);
+}
+
+function goTo(n) {
+  if (n < 0 || n >= total) return;
+  slides[cur].classList.remove('active');
+  slides[cur].classList.add('out-left');
+  setTimeout(() => slides[cur].classList.remove('out-left'), 300);
+  cur = n;
+  slides[cur].classList.add('active');
+  document.querySelectorAll('.dot').forEach((d,i) => d.classList.toggle('active', i === cur));
+  document.getElementById('btnPrev').disabled = cur === 0;
+  document.getElementById('btnNext').disabled = cur === total - 1;
+  document.getElementById('pageLabel').textContent = (cur + 1) + ' / ' + total;
+}
+
+function go(dir) { goTo(cur + dir); }
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'ArrowRight' || e.key === 'ArrowDown') go(1);
+  if (e.key === 'ArrowLeft'  || e.key === 'ArrowUp')   go(-1);
+  if (e.key === 'Escape') goTo(0);
+});
+
+setTimeout(() => document.getElementById('hint').classList.add('hidden'), 4000);
+</script>
+</body>
+</html>
